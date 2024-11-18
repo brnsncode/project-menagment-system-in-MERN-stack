@@ -50,6 +50,12 @@ function Task() {
             const sourceItems = [...sourceColumn.items];
             const destItems = [...destColumn.items];
             const [removed] = sourceItems.splice(source.index, 1);
+
+            // Prevent drop if the destination is "In Progress" and already has 10 items
+            if (destColumn.name === "In Progress" && destColumn.items.length >= 10) {
+                toast.error("Cannot add more tasks to 'In Progress' - limit reached!");
+                return;
+            }
             destItems.splice(destination.index, 0, removed);
 
             setColumns({
@@ -105,10 +111,16 @@ function Task() {
     const [columns, setColumns] = useState({});
     const [isRenderChange, setRenderChange] = useState(false);
     const [isTaskOpen, setTaskOpen] = useState(false);
-    const [taskId, setTaskId] = useState(false);
+    const [taskId , setTaskId] = useState(false);
     const [title, setTitle] = useState('');
     const { projectId } = useParams();
     const navigate = useNavigate();
+
+    const [isEditTaskModalOpen, setEditTaskModal] = useState(false);
+
+    const refreshData = () => {
+        setRenderChange(true)
+    }
 
     useEffect(() => {
         if (!isAddTaskModalOpen || isRenderChange) {
@@ -123,14 +135,20 @@ function Task() {
                             })
                         },
                         [uuid()]: {
-                            name: "To do",
-                            items: res.data[0].task.filter((task) => task.stage === "To do").sort((a, b) => {
+                            name: "In Progress",
+                            items: res.data[0].task.filter((task) => task.stage === "In Progress").sort((a, b) => {
                                 return a.order - b.order;
                             })
                         },
                         [uuid()]: {
-                            name: "In Progress",
-                            items: res.data[0].task.filter((task) => task.stage === "In Progress").sort((a, b) => {
+                            name: "Under Review",
+                            items: res.data[0].task.filter((task) => task.stage === "Under Review").sort((a, b) => {
+                                return a.order - b.order;
+                            })
+                        },
+                        [uuid()]: {
+                            name: "On Hold",
+                            items: res.data[0].task.filter((task) => task.stage === "On Hold").sort((a, b) => {
                                 return a.order - b.order;
                             })
                         },
@@ -173,6 +191,18 @@ function Task() {
         setTaskOpen(true);
     }
 
+    const handleSetEditModal = (id) => {
+    //  id.stopPropagation();
+        isEditTaskModalOpen(true)
+        setEditTaskModal(true)
+    }
+
+    function sumCapacity(items) {
+        return items.reduce((total, item) => {
+            return total + (item.capacity || 0); // Add capacity if it exists, otherwise add 0
+        }, 0);
+    }
+
     return (
         <div className='px-12 py-6 w-full'>
             <div className="flex items-center justify-between mb-6">
@@ -180,7 +210,7 @@ function Task() {
                     <span>{title.slice(0, 25)}{title.length > 25 && '...'}</span>
                     <ProjectDropdown id={projectId} navigate={navigate} />
                 </h1>
-                <BtnPrimary onClick={() => setAddTaskModal(true)}>Add todo</BtnPrimary>
+                <BtnPrimary onClick={() => setAddTaskModal(true)}>Add ToDo</BtnPrimary>
             </div>
             <DragDropContext
                 onDragEnd={result => onDragEnd(result, columns, setColumns)}
@@ -196,6 +226,8 @@ function Task() {
                                     <div className="inline-flex items-center space-x-2">
                                         <h2 className=" text-[#1e293b] font-medium text-sm uppercase leading-3">{column.name}</h2>
                                         <span className={`h-5 inline-flex items-center justify-center px-2 mb-[2px] leading-none rounded-full text-xs font-semibold text-gray-500 border border-gray-300 ${column.items.length < 1 && 'invisible'}`}>{column.items?.length}</span>
+                                        <span className={`h-5 inline-flex items-center justify-center px-2 mb-[2px] leading-none rounded-full text-xs font-semibold ${sumCapacity(column.items) >= 100 ? 'text-white bg-red-500' : 'text-gray-500 border-gray-300'} border ${column.items.length < 1 && 'invisible'}`}>{sumCapacity(column.items)}</span>
+
                                     </div>
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" width={15} className="text-[#9ba8bc]" viewBox="0 0 448 512"><path d="M120 256c0 30.9-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56s56 25.1 56 56zm160 0c0 30.9-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56s56 25.1 56 56zm104 56c-30.9 0-56-25.1-56-56s25.1-56 56-56s56 25.1 56 56s-25.1 56-56 56z" /></svg>
                                 </div>
@@ -222,16 +254,17 @@ function Task() {
                                                                             {...provided.draggableProps}
                                                                             {...provided.dragHandleProps}
                                                                             style={{ ...provided.draggableProps.style }}
-                                                                            onClick={() => handleTaskDetails(item._id)}
+                                                                            // onClick={() => handleTaskDetails(item._id)}
+                                                                            // onClick={() => handleSetEditModal(item._id)}
                                                                             className={`select-none px-3.5 pt-3.5 pb-2.5 mb-2 border border-gray-200 rounded-lg shadow-sm bg-white relative ${snapshot.isDragging && 'shadow-md'}`}
                                                                         >
                                                                             <div className="pb-2">
                                                                                 <div className="flex item-center justify-between">
-                                                                                    <h3 className="text-[#1e293b] font-medium text-sm capitalize">{item.title.slice(0, 22)}{item.title.length > 22 && '...'}</h3>
+                                                                                    <h3 className="text-[#1e293b] font-medium text-sm capitalize">{item.title.slice(0, 60)}{item.title.length > 60 && '...'}</h3>
                                                                                     <DropdownMenu taskId={item._id} handleDelete={handleDelete} projectId={projectId} setRenderChange={setRenderChange} />
                                                                                 </div>
                                                                                 <p className="text-xs text-slate-500 leading-4 -tracking-tight">{item.description.slice(0, 60)}{item.description.length > 60 && '...'}</p>
-                                                                                <span className="py-1 px-2.5 bg-indigo-100 text-indigo-600 rounded-md text-xs font-medium mt-1 inline-block">Task-{item.index}</span>
+                                                                                <span className="py-1 px-2.5 bg-indigo-100 text-indigo-600 rounded-md text-xs font-medium mt-1 inline-block">Capacity: {item.capacity}</span>
                                                                             </div>
                                                                         </div>
                                                                     );
@@ -252,6 +285,8 @@ function Task() {
                 </div >
             </DragDropContext >
             <AddTaskModal isAddTaskModalOpen={isAddTaskModalOpen} setAddTaskModal={setAddTaskModal} projectId={projectId} />
+            <AddTaskModal isAddTaskModalOpen={isEditTaskModalOpen} setAddTaskModal={setEditTaskModal} projectId={projectId} taskId={taskId} edit={true} refreshData={refreshData} />
+            {/* <AddTaskModal isAddTaskModalOpen={isEditTaskModalOpen} setAddTaskModal={setEditTaskModal} projectId={projectId} taskId={taskId} edit={true} refreshData={refreshData} /> */}
             <TaskModal isOpen={isTaskOpen} setIsOpen={setTaskOpen} id={taskId} />
         </div >
     );

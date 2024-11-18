@@ -2,11 +2,16 @@
 import mongoose from "mongoose";
 
 const project = new mongoose.Schema({
+
+    //project title listed here
     title: {
         type: String,
         unique: true // `email` must be unique
     },
+    //project description listed here
     description: String,
+
+    //details of individual task assigned to each project assigned here
     task: [
         {
             id: Number,
@@ -14,6 +19,8 @@ const project = new mongoose.Schema({
             description: String,
             order: Number,
             stage: String,
+            isOneList: Boolean,
+            capacity: { type: Number, default: 10 },
             index: Number,
             attachment: [
                 { type: String, url: String }

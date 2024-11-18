@@ -1,30 +1,30 @@
 import express from 'express';
 import joi from 'joi';
 import mongoose from 'mongoose';
-import Project from '../models/index.js'
+import TaskNote from '../models/tasknote.js'
 
-const api = express.Router()
+const taskNote = express.Router()
 
-api.get('/projects', async (req, res) => {
+taskNote.get('/tasknote', async (req, res) => {
     try {
-        const data = await Project.find({}, { task: 0, __v: 0, updatedAt: 0 })
+        const data = await TaskNote.find({}, { task: 0, __v: 0, updatedAt: 0 })
         return res.send(data)
     } catch (error) {
         return res.send(error)
     }
 })
 
-api.get('/project/:id', async (req, res) => {
+taskNote.get('/tasknote/:id', async (req, res) => {
     if (!req.params.id) res.status(422).send({ data: { error: true, message: 'Id is reaquire' } })
     try {
-        const data = await Project.find({ _id: mongoose.Types.ObjectId(req.params.id) }).sort({ order: 1 })
+        const data = await TaskNote.find({ _id: mongoose.Types.ObjectId(req.params.id) }).sort({ order: 1 })
         return res.send(data)
     } catch (error) {
         return res.send(error)
     }
 })
 
-api.post('/project', async (req, res) => {
+taskNote.post('/tasknote', async (req, res) => {
 
     // validate type 
     const project = joi.object({
@@ -53,7 +53,7 @@ api.post('/project', async (req, res) => {
 
 })
 
-api.put('/project/:id', async (req, res) => {
+taskNote.put('/tasknote/:id', async (req, res) => {
     // validate type 
     const project = joi.object({
         title: joi.string().min(3).max(100).required(),
@@ -75,7 +75,7 @@ api.put('/project/:id', async (req, res) => {
 
 })
 
-api.delete('/project/:id', async (req, res) => {
+taskNote.delete('/tasknote/:id', async (req, res) => {
     try {
         const data = await Project.deleteOne({ _id: mongoose.Types.ObjectId(req.params.id) })
         res.send(data)
@@ -88,35 +88,35 @@ api.delete('/project/:id', async (req, res) => {
 
 //  task api   
 
-api.post('/project/:id/task', async (req, res) => {
+taskNote.post('/tasknote/:id/task', async (req, res) => {
 
 
     if (!req.params.id) return res.status(500).send(`server error`);
 
     // validate type 
     const task = joi.object({
-        title: joi.string().min(3).max(100).required(),
-        description: joi.string().required(),
+        note: joi.string().min(3).max(100).required(),
+        // description: joi.string().required(),
     })
 
-    const { error, value } = task.validate({ title: req.body.title, description: req.body.description });
+    const { error, value } = task.validate({ note: req.body.note});
     if (error) return res.status(422).send(error)
 
     try {
         // const task = await Project.find({ _id: mongoose.Types.ObjectId(req.params.id) }, { "task.index": 1 })
-        const [{ task }] = await Project.find({ _id: mongoose.Types.ObjectId(req.params.id) }, { "task.index": 1 }).sort({ 'task.index': 1 })
+        const [{ task }] = await TaskNote.find({ _id: mongoose.Types.ObjectId(req.params.id) }, { "task.index": 1 }).sort({ 'task.index': 1 })
 
 
         let countTaskLength = [task.length, task.length > 0 ? Math.max(...task.map(o => o.index)) : task.length];
 
-        const data = await Project.updateOne({ _id: mongoose.Types.ObjectId(req.params.id) }, { $push: { task: { ...value, stage: "Requested", order: countTaskLength[0], index: countTaskLength[1] + 1 } } })
+        const data = await TaskNote.updateOne({ _id: mongoose.Types.ObjectId(req.params.id) }, { $push: { task: { ...value, stage: "Requested", order: countTaskLength[0], index: countTaskLength[1] + 1 } } })
         return res.send(data)
     } catch (error) {
         return res.status(500).send(error)
     }
 })
 
-api.get('/project/:id/task/:taskId', async (req, res) => {
+taskNote.get('/tasknote/:id/task/:taskId', async (req, res) => {
 
     if (!req.params.id || !req.params.taskId) return res.status(500).send(`server error`);
 
@@ -151,7 +151,7 @@ api.get('/project/:id/task/:taskId', async (req, res) => {
 })
 
 
-api.put('/project/:id/task/:taskId', async (req, res) => {
+taskNote.put('/tasknote/:id/task/:taskId', async (req, res) => {
 
     if (!req.params.id || !req.params.taskId) return res.status(500).send(`server error`);
 
@@ -191,7 +191,7 @@ api.put('/project/:id/task/:taskId', async (req, res) => {
 
 })
 
-api.delete('/project/:id/task/:taskId', async (req, res) => {
+taskNote.delete('/tasknote/:id/task/:taskId', async (req, res) => {
 
     if (!req.params.id || !req.params.taskId) return res.status(500).send(`server error`);
 
@@ -204,7 +204,7 @@ api.delete('/project/:id/task/:taskId', async (req, res) => {
 
 })
 
-api.put('/project/:id/todo', async (req, res) => {
+taskNote.put('/tasknote/:id/todo', async (req, res) => {
     let todo = []
 
     for (const key in req.body) {
@@ -225,7 +225,7 @@ api.put('/project/:id/todo', async (req, res) => {
     res.send(todo)
 })
 
-// api.use('/project/:id/task', async (req, res, next) => {
+// taskNote.use('/project/:id/task', async (req, res, next) => {
 //     if (req.method !== "GET") return next()
 
 //     if (!req.params.id) return res.status(500).send(`server error`);
@@ -240,10 +240,10 @@ api.put('/project/:id/todo', async (req, res) => {
 
 // })
 
-// api.get('/project/:id/task/:taskId', (req, res) => {
+// taskNote.get('/project/:id/task/:taskId', (req, res) => {
 //     res.send(req.params)
 // })
 
 
 
-export default api
+export default taskNote
